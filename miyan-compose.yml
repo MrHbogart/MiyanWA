@@ -1,0 +1,93 @@
+services:
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    env_file:
+      - ./Miyan_Backend/.env
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - miyan_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER:-postgres}\" -d \"$${POSTGRES_DB:-postgres}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  backend:
+    build:
+      context: .
+      dockerfile: Miyan_Backend/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./Miyan_Backend/.env
+    environment:
+      DJANGO_IN_DOCKER: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - backend_static:/app/staticfiles
+      - backend_media:/app/media
+    networks:
+      - miyan_network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -H 'X-Forwarded-Proto: https' http://127.0.0.1:8000/api/core/health/ || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  frontend:
+    build:
+      context: ./Miyan_Frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./Miyan_Frontend/.env
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "3000:3000"
+    networks:
+      - miyan_network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3000/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  telegrambot:
+    build:
+      context: ./Miyan_TelegramBot
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./Miyan_TelegramBot/.env
+    environment:
+      BOT_STATE_PATH: /data/state.json
+      API_URL: ${API_URL:-http://backend:8000}
+    depends_on:
+      backend:
+        condition: service_healthy
+    volumes:
+      - telegram_data:/data
+    networks:
+      - miyan_network
+
+networks:
+  miyan_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  backend_static:
+  backend_media:
+  telegram_data:

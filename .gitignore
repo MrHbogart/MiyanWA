@@ -1,0 +1,50 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Node / Nuxt
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/
+.yarn-cache/
+.output/
+.nuxt/
+.dist/
+
+# Build / artifacts
+build/
+dist/
+*.log
+
+# Docker
+**/.docker/
+
+# Data
+*.sqlite3

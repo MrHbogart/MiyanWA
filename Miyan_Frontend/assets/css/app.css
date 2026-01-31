@@ -1,0 +1,455 @@
+/* Global custom styles. Tailwind directives live in assets/css/tailwind.css */
+:root {
+  --app-vh-fixed: 1vh;
+  --app-vh: 1vh;
+  --app-vw-fixed: 1vw;
+  --app-vw: 1vw;
+  --vh: 1vh;
+  --font-en: 'Cinzel', 'Inter', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-fa: 'B Titr', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-base: var(--font-fa);
+  --font-weight-body: 500;
+  --font-weight-strong: 700;
+  /* Spacing scale */
+  --space-1: 0.5rem;
+  --space-1-5: 0.75rem;
+  --space-2: 1rem;
+  --space-2-5: 1.25rem;
+  --space-3: 1.5rem;
+  --space-4: 1.75rem;
+  /* Layout gutters */
+  --page-shell-pad: clamp(1.5rem, 8vw, 6rem);
+  --page-shell-pad-compact: clamp(1.5rem, 6vw, 4.5rem);
+  --page-shell-pad-mobile: 1rem;
+  --nav-inner-pad: 0rem;
+  --nav-link-pad-x: 1rem;
+  --nav-link-pad-x-md: 1.5rem;
+  --nav-link-pad-y: 0.9rem;
+  --nav-link-pad-y-md: 1rem;
+  --logo-link-pad-x: 0.8rem;
+  --logo-link-pad-y: 0.45rem;
+}
+
+html, body, #app, #__nuxt {
+  min-height: 100svh;
+  min-height: calc(var(--app-vh-fixed, var(--app-vh, 1vh)) * 100);
+  min-height: 100dvh;
+  width: 100%;
+  max-width: 100%;
+}
+
+#app,
+#__nuxt {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  min-height: 100svh;
+  min-height: calc(var(--app-vh-fixed, var(--app-vh, 1vh)) * 100);
+  min-height: 100dvh;
+  box-sizing: border-box;
+}
+
+/* Portrait mode: apply safe-area insets as padding to contain content */
+@media (orientation: portrait) {
+  #app,
+  #__nuxt {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* keep overscroll surface consistent with the app */
+html {
+  background: #fdfcfa;
+  box-sizing: border-box;
+  overscroll-behavior: none;
+  overflow-x: hidden;
+}
+body { background: var(--surface, #FFFFFF);}
+
+html[lang="en"] {
+  --font-base: var(--font-en);
+  --font-weight-body: 400;
+  --font-weight-strong: 650;
+}
+
+html[lang="fa"] {
+  --font-base: var(--font-fa);
+  --font-weight-body: 600;
+  --font-weight-strong: 800;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-family: var(--font-base), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  font-weight: var(--font-weight-body);
+  background: var(--surface, #FFFFFF);
+  color: var(--accent, #0b0b0b);
+  margin: 0;
+  padding: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  overscroll-behavior: none;
+  overflow-x: hidden;
+}
+
+/* Luxury design tokens with refined colors */
+:root {
+  --surface: #fdfcfa;
+  --accent: #121212;
+  --brand: #2b2b2b; /* dark slate */
+  --metal: #9aa0a6;
+  --concrete: #6b6b6b;
+  --thin-line: rgba(11, 11, 11, 0.06);
+  --luxury-shadow: 0 0.25rem 2rem rgba(0, 0, 0, 0.08), 0 0.125rem 0.5rem rgba(0, 0, 0, 0.12);
+  --luxury-shadow-hover: 0 0.5rem 3rem rgba(0, 0, 0, 0.12), 0 0.25rem 1rem rgba(0, 0, 0, 0.16);
+  --easing-luxury: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --easing-smooth: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --easing-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --story-copy-gutter: clamp(1.5rem, 5vw, 3.5rem);
+}
+
+.hero-fill-safe {
+  position: absolute;
+  inset: 0;
+  top: calc(env(safe-area-inset-top, 0px) * -1);
+  height: calc(100% + env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px));
+  width: calc(100% + env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px));
+  left: calc(env(safe-area-inset-left, 0px) * -1);
+  right: calc(env(safe-area-inset-right, 0px) * -1);
+}
+.hero-fill-safe video,
+.hero-fill-safe img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  display: block;
+}
+
+@media (orientation: landscape) and (max-width: 1024px) {
+  .hero-fill-safe {
+    left: 0;
+    right: 0;
+    width: 100%;
+  }
+}
+
+/* In landscape, ensure hero-fill-safe uses full device width including notches */
+@media (orientation: landscape) {
+  .hero-fill-safe {
+    left: calc(env(safe-area-inset-left, 0px) * -1);
+    right: calc(env(safe-area-inset-right, 0px) * -1);
+    width: calc(100% + env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px));
+  }
+}
+
+.swipe-left-enter-active,
+.swipe-left-leave-active,
+.swipe-right-enter-active,
+.swipe-right-leave-active {
+  transition: transform 600ms cubic-bezier(.2,.8,.2,1), opacity 500ms ease;
+  will-change: transform, opacity;
+}
+
+.swipe-left-enter-from,
+.swipe-right-leave-to {
+  transform: translateX(40px);
+  opacity: 0;
+}
+
+.swipe-left-leave-to,
+.swipe-right-enter-from {
+  transform: translateX(-40px);
+  opacity: 0;
+}
+
+.swipe-left-enter-to,
+.swipe-left-leave-from,
+.swipe-right-enter-to,
+.swipe-right-leave-from {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+/* header style rules */
+header { will-change: transform, background-color }
+.header-hidden { transform: translateY(-100%) }
+
+/* opt-in presentation helpers */
+.content-shell {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding-left: max(env(safe-area-inset-left), var(--page-shell-pad));
+  padding-right: max(env(safe-area-inset-right), var(--page-shell-pad));
+}
+
+.content-shell--flush {
+  /* Flush variant removes the large horizontal padding so inner content
+     (e.g., menus) can align to the viewport without overflow. */
+  padding-left: 0;
+  padding-right: 0;
+  padding-bottom: 0;
+}
+
+@media (max-width: 640px) {
+  .content-shell--flush {
+    padding-left: var(--page-shell-pad-mobile);
+    padding-right: var(--page-shell-pad-mobile);
+  }
+}
+
+/* Restore measured horizontal breathing room for menu child views on desktop */
+@media (min-width: 1024px) {
+  .content-shell--flush {
+    padding-left: var(--page-shell-pad-compact);
+    padding-right: var(--page-shell-pad-compact);
+  }
+}
+
+.child-swipe-wrapper {
+  width: 100%;
+  overflow-x: hidden;
+  max-width: 100%;
+  min-width: 100%;
+}
+
+.view-shell,
+.landing-shell,
+.nav-placeholder,
+main,
+.hero-fill-safe,
+.modal-frame,
+.miyan-hero-panel,
+.miyan-modal-panel,
+.immersive-stack,
+.story-scene {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Portrait mode: compensate root safe-area padding to expand full-bleed elements */
+@media (orientation: portrait) {
+  .view-shell,
+  .landing-shell,
+  .nav-placeholder,
+  main,
+  .hero-fill-safe,
+  .modal-frame,
+  .miyan-hero-panel,
+  .miyan-modal-panel,
+  .immersive-stack,
+  .story-scene {
+    margin-left: calc(env(safe-area-inset-left, 0px) * -1);
+    margin-right: calc(env(safe-area-inset-right, 0px) * -1);
+    width: calc(100% + env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px));
+    max-width: calc(100% + env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px));
+  }
+}
+
+@supports (width: 100dvw) {
+  /* Landscape mode: use 100dvw which includes the safe-area space */
+  @media (orientation: landscape) {
+    .view-shell,
+    .landing-shell,
+    .nav-placeholder,
+    main,
+    .hero-fill-safe,
+    .modal-frame,
+    .miyan-hero-panel,
+    .miyan-modal-panel,
+    .immersive-stack,
+    .story-scene {
+      width: 100dvw;
+      max-width: 100dvw;
+      margin-left: 0;
+      margin-right: 0;
+    }
+  }
+  
+  /* Portrait mode: use 100dvw with safe-area compensation */
+  @media (orientation: portrait) {
+    .view-shell,
+    .landing-shell,
+    .nav-placeholder,
+    main,
+    .hero-fill-safe,
+    .modal-frame,
+    .miyan-hero-panel,
+    .miyan-modal-panel,
+    .immersive-stack,
+    .story-scene {
+      width: calc(100dvw + env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px));
+      max-width: calc(100dvw + env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px));
+      margin-left: calc(env(safe-area-inset-left, 0px) * -1);
+      margin-right: calc(env(safe-area-inset-right, 0px) * -1);
+    }
+  }
+}
+
+.nav-placeholder {
+  background: var(--surface, #f9f6f1);
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.nav-inner {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 var(--nav-inner-pad);
+}
+
+.brand-surface {
+  position: relative;
+  background: transparent;
+}
+.brand-surface::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 80% 0%, var(--brand-surface-highlight, rgba(255,255,255,0.35)), transparent 45%);
+  z-index: 0;
+}
+.brand-surface > * {
+  position: relative;
+  z-index: 1;
+}
+.brand-surface--miyan {
+  --brand-surface-highlight: rgba(255,255,255,0.45);
+}
+.brand-surface--beresht {
+  --brand-surface-highlight: rgba(255,247,205,0.55);
+}
+.brand-surface--madi {
+  --brand-surface-highlight: rgba(225,240,255,0.45);
+}
+
+.nav-link {
+  font-size: clamp(0.82rem, 1.4vw, 1.05rem);
+  letter-spacing: 0.14em;
+  transition: color 220ms ease, text-shadow 220ms ease, transform 220ms ease, opacity 220ms ease;
+}
+.nav-link--active {
+  font-weight: 600;
+  text-shadow: none;
+  transform: none;
+  opacity: 1;
+}
+.nav-link--idle {
+  opacity: 0.78;
+}
+
+/* rtl helpers */
+[dir="rtl"] .ml-4 { margin-left: 0 !important }
+[dir="rtl"] .mr-4 { margin-right: 0 !important }
+
+/* Reduce excessive letter-spacing for Persian (RTL) content */
+[dir="rtl"] .tracking-wide,
+[dir="rtl"] .tracking-wider,
+[dir="rtl"] .tracking-tight,
+[dir="rtl"] .uppercase {
+  letter-spacing: 0.02em !important;
+}
+
+/* Normalize display chips/overlines in RTL to avoid spaced-out Arabic script */
+[dir="rtl"] .overline,
+[dir="rtl"] .modal-overline,
+[dir="rtl"] .modal-chip,
+[dir="rtl"] .story-overline,
+[dir="rtl"] .hero-highlights span {
+  letter-spacing: 0.06em !important;
+}
+
+.copy-breaks {
+  white-space: pre-line;
+}
+
+.h-screen {
+  height: 100svh !important;
+  height: calc(var(--app-vh-fixed, var(--app-vh, 1vh)) * 100) !important;
+  height: 100dvh !important;
+  min-height: 100svh !important;
+  min-height: calc(var(--app-vh-fixed, var(--app-vh, 1vh)) * 100) !important;
+  min-height: 100dvh !important;
+}
+
+.min-h-screen {
+  min-height: 100svh !important;
+  min-height: calc(var(--app-vh-fixed, var(--app-vh, 1vh)) * 100) !important;
+  min-height: 100dvh !important;
+}
+
+/* Safe-area aware surface helpers */
+.safe-viewport {
+  min-height: 100svh;
+  min-height: calc(var(--app-vh-fixed, var(--app-vh, 1vh)) * 100);
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Persian ligatures & spacing fix for mobile Safari */
+html[lang="fa"],
+[dir="rtl"] {
+  letter-spacing: 0 !important;
+}
+
+html[lang="fa"] *,
+[dir="rtl"] * {
+  letter-spacing: 0 !important;
+  font-feature-settings: "calt" 1, "liga" 1;
+}
+
+@media (orientation: landscape) {
+  .content-shell {
+    padding-left: max(env(safe-area-inset-left), 0px);
+    padding-right: max(env(safe-area-inset-right), 0px);
+  }
+
+  .content-shell--flush {
+    padding-left: max(env(safe-area-inset-left), 0px);
+    padding-right: max(env(safe-area-inset-right), 0px);
+  }
+
+  .nav-placeholder {
+    padding-left: max(env(safe-area-inset-left), 0px);
+    padding-right: max(env(safe-area-inset-right), 0px);
+  }
+  
+  /* Ensure footer and other content spans full width and is centered */
+  main {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+/* Block landscape usage to keep the experience portrait-locked */
+.orientation-blocker {
+  display: none;
+}
+
+/* Landscape-specific centering and full-bleed fixes */
+@media (orientation: landscape) {
+  /* Hero sections should use full viewport height with proper centering */
+  section.relative.w-full.flex.items-center.justify-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+  
+  /* Ensure hero content divs center properly */
+  section.relative.w-full.flex.items-center.justify-center > div[class*="z-10"] {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}

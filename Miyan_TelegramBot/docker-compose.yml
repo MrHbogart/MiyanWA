@@ -1,0 +1,16 @@
+services:
+  telegrambot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      BOT_STATE_PATH: /data/state.json
+      API_URL: ${API_URL:-http://backend:8000}
+    volumes:
+      - telegram_data:/data
+
+volumes:
+  telegram_data:

@@ -1,0 +1,13 @@
+@font-face {
+  font-family: 'B Titr';
+  src: url('/fonts/b-titr-bold.ttf') format('truetype');
+  font-weight: bold;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Cinzel';
+  src: url('/fonts/Cinzel-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-display: swap;
+}
