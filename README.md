@@ -1,23 +1,34 @@
-# Miyan Web App
+# Miyan Web Platform
 
-Full-stack web platform for Miyan Group, composed of a Django REST API, a Nuxt 3 SSR frontend, and a Telegram bot used for inventory workflows.
+Full-stack web platform for Miyan Group, combining a Django REST API, a Nuxt 3 SSR frontend, and a Telegram bot used for inventory workflows.
 
-## Stack
+<p align="center">
+  <img src="frontend/public/images/miyan_logo_black.png" width="220" alt="Miyan logo">
+</p>
 
-- Backend: Django 4 + Django REST Framework + Gunicorn
-- Frontend: Nuxt 3 (SSR)
-- Bot: Python (Telegram bot)
-- Database: Postgres 15
-- Deployment: Docker Compose + Nginx reverse proxy
+## Highlights
 
-## Services
+- Django REST API with inventory workflows and staff tooling
+- Nuxt 3 SSR frontend with production-ready deployment
+- Telegram bot for staff inventory updates
+- Docker Compose orchestration with Nginx reverse proxy
+
+## Architecture
 
 ```
 [Browser] -> [Nginx] -> /api  -> backend:8000 -> Postgres
                    \-> /     -> frontend:3000
 
-[Telegram] -> telegrambot -> backend:8000
+[Telegram] -> telegram-bot -> backend:8000
 ```
+
+## Media
+
+<p>
+  <img src="frontend/assets/images/miyan/miyan_group_1.jpeg" width="300" alt="Miyan team">
+  <img src="frontend/assets/images/miyan/miyan_green_bean.jpg" width="300" alt="Miyan product">
+  <img src="frontend/assets/images/beresht/beresht_3.jpeg" width="300" alt="Beresht product">
+</p>
 
 ## Repository layout
 
