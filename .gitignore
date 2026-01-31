@@ -9,6 +9,7 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+.envrc
 
 # Python
 __pycache__/
@@ -48,3 +49,5 @@ dist/
 
 # Data
 *.sqlite3
+staticfiles/
+media/

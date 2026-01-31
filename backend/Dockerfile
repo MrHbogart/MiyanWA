@@ -33,10 +33,10 @@ ENV PATH="${VENV_PATH}/bin:${PATH}"
 
 ## Copy only the backend app files from the repository root into /app. When the
 ## build context is the repository root (we changed that in compose), a plain
-## `COPY . .` would place files under /app including a `Miyan_Backend/` folder,
+## `COPY . .` would place files under /app including a `backend/` folder,
 ## which breaks paths expected by the entrypoint. Copy the backend dir content
 ## into /app so files like `docker-entrypoint.sh` live at /app/docker-entrypoint.sh
-COPY Miyan_Backend/ .
+COPY backend/ .
 
 RUN set -eux; \
     groupadd --system "${APP_USER}" || true; \
