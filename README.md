@@ -1,56 +1,47 @@
 # Miyan Web Platform
 
-Full-stack web platform for Miyan Group, combining a Django REST API, a Nuxt 3 SSR frontend, and a Telegram bot used for inventory workflows.
+Full-stack web platform for Miyan Group, with a Django REST API backend and a Nuxt 3 SSR frontend.
 
 <p align="center">
   <img src="frontend/public/images/miyan_logo_black.png" width="220" alt="Miyan logo">
 </p>
 
-## Highlights
-
-- Django REST API with inventory workflows and staff tooling
-- Nuxt 3 SSR frontend with production-ready deployment
-- Telegram bot for staff inventory updates
-- Docker Compose orchestration with Nginx reverse proxy
-
 ## Architecture
 
 ```
-[Browser] -> [Nginx] -> /api  -> backend:8000 -> Postgres
-                   \-> /     -> frontend:3000
+[Browser] -> frontend:3000
+[Browser/API clients] -> backend:8000/api
 
-[Telegram] -> telegram-bot -> backend:8000
+backend:8000 -> SQLite
 ```
-
-## Media
-
-<p>
-  <img src="frontend/assets/images/miyan/miyan_group_1.jpeg" width="300" alt="Miyan team">
-  <img src="frontend/assets/images/miyan/miyan_green_bean.jpg" width="300" alt="Miyan product">
-  <img src="frontend/assets/images/beresht/beresht_3.jpeg" width="300" alt="Beresht product">
-</p>
 
 ## Repository layout
 
-- `backend/`: Django project + Dockerfile
+- `backend/`: Django project + Dockerfile + startup entrypoint (migrations, seed, collectstatic)
 - `frontend/`: Nuxt app + Dockerfile
-- `telegram-bot/`: Telegram bot service
-- `docker-compose.yml`: Production docker-compose for all services
-- `default.conf`: Example Nginx reverse proxy configuration
+- `docker-compose.yml`: single project orchestrator for local build/run
 
-## Quick start (Docker)
+## Quick start (Docker, local)
 
-1. Create environment files from templates:
-   - `cp .env.example backend/.env`
-   - `cp .env.example frontend/.env`
-   - `cp .env.example telegram-bot/.env`
-2. Start the stack:
-   - `docker compose up -d --build`
-3. Verify:
-   - Backend health: `http://localhost:8000/api/core/health/`
-   - Frontend: `http://localhost:3000/`
+1. Build and run everything:
+   - `docker compose up --build`
+2. Open in browser:
+   - Frontend: `http://localhost:3030`
+   - Backend health: `http://localhost:8080/api/core/health/`
 
-The backend container waits for Postgres, runs migrations, and collects static files on startup.
+On backend startup, the entrypoint applies migrations, seeds curated data, and collects static files using the configured SQLite database.
+
+## Optional environment overrides
+
+`docker-compose.yml` already contains local-safe defaults. If you want to override values, create a root `.env` file (Docker Compose auto-loads it) and set values such as:
+
+- `DJANGO_DEBUG`
+- `DJANGO_ALLOWED_HOSTS`
+- `DJANGO_CORS_ALLOWED_ORIGINS`
+- `DJANGO_CSRF_TRUSTED_ORIGINS`
+- `NUXT_PUBLIC_API_BASE_URL`
+
+For local non-Docker development, copy `.env.example` into `backend/.env` and `frontend/.env`.
 
 ## Local development (without Docker)
 
@@ -58,8 +49,8 @@ Backend:
 1. `cd backend`
 2. `python -m venv .venv && source .venv/bin/activate`
 3. `cp ../.env.example .env`
-4. Ensure Postgres is available and matches the `.env` values
-5. `pip install -r requirements.txt`
+4. `pip install -r requirements.txt`
+5. Ensure the SQLite database path in `.env` is writable (default: `db.sqlite3` inside the backend folder) and matches your environment.
 6. `python manage.py migrate`
 7. `python manage.py runserver`
 
@@ -69,30 +60,32 @@ Frontend:
 3. `npm ci`
 4. `npm run dev`
 
-Telegram bot:
-1. `cd telegram-bot`
-2. `cp ../.env.example .env`
-3. `python -m venv .venv && source .venv/bin/activate`
-4. `pip install -r requirements.txt`
-5. `python bot.py`
+## M1/macOS and cross-platform server compatibility
 
-## Environment configuration
+The stack now defaults to multi-arch-capable images (`python:3.12-slim`, `node:20-alpine`, and official Debian/Alpine repos), so it can run on different server architectures.
 
-Each service loads its own environment file:
+- Leave `DOCKER_PLATFORM` empty for host-native builds/runs (recommended).
+- To force a specific target architecture, set `DOCKER_PLATFORM` in your `.env` (for example `linux/amd64` or `linux/arm64`).
 
-- `backend/.env` for Django and Postgres credentials
-- `frontend/.env` for Nuxt public runtime configuration
-- `telegram-bot/.env` for Telegram credentials and API URL
+For true multi-architecture publishing, use BuildKit:
 
-Do not commit real secrets. Use the `.env.example` templates instead.
+```bash
+# one-time setup per machine
+docker buildx create --use --name miyan-builder
 
-## Deployment
+# example: build & push backend (from repo root)
+docker buildx build --platform linux/amd64,linux/arm64 \
+  -f backend/Dockerfile -t <your-registry>/miyan-backend:latest --push .
 
-- Use `docker-compose.yml` to build and run all services.
-- The recommended setup is Nginx on the host proxying:
-  - `/` -> `127.0.0.1:3000`
-  - `/api` -> `127.0.0.1:8000`
-- See `default.conf` for the example Nginx configuration.
+# example: build & push frontend
+docker buildx build --platform linux/amd64,linux/arm64 \
+  -f frontend/Dockerfile -t <your-registry>/miyan-frontend:latest --push ./frontend
+```
+
+## Deployment notes
+
+- Local defaults are intentionally development-safe (no forced HTTPS redirect).
+- For production, override security-related settings (`DJANGO_SECURE_SSL_REDIRECT`, secure cookie flags, trusted origins/hosts).
 
 ## License
 

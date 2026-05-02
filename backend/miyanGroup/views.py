@@ -1,11 +1,7 @@
-from django.conf import settings
-from django.utils import timezone
 from rest_framework import permissions, status, viewsets
-from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 from core.viewsets import AdminWritePermissionMixin
 from . import models, serializers
@@ -43,17 +39,6 @@ class StaffViewSet(AdminWritePermissionMixin, viewsets.ModelViewSet):
         except models.Staff.DoesNotExist:
             return Response({'detail': 'Staff profile not found.'}, status=status.HTTP_404_NOT_FOUND)
         return Response(serializers.StaffSerializer(staff).data)
-
-    @action(detail=False, methods=['post'], url_path='refresh-telegram-token', permission_classes=[permissions.IsAdminUser])
-    def refresh_telegram_token(self, request):
-        staff_id = request.data.get('staff_id')
-        try:
-            staff = models.Staff.objects.get(id=staff_id)
-        except models.Staff.DoesNotExist:
-            return Response({'detail': 'Staff not found.'}, status=status.HTTP_404_NOT_FOUND)
-        staff.telegram_token = models.generate_telegram_token()
-        staff.save(update_fields=['telegram_token'])
-        return Response({'telegram_token': staff.telegram_token})
 
 
 class StaffAssignmentViewSet(AdminWritePermissionMixin, viewsets.ModelViewSet):
@@ -192,53 +177,3 @@ class InventoryInputViewSet(viewsets.ModelViewSet):
             return self.request.user.staff_profile
         except models.Staff.DoesNotExist:
             raise PermissionDenied('Staff profile required')
-
-
-class TelegramLinkView(APIView):
-    permission_classes = [permissions.AllowAny]
-
-    def post(self, request, *args, **kwargs):
-        serializer = serializers.TelegramLinkSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        token_value = serializer.validated_data['telegram_token']
-        telegram_id = serializer.validated_data.get('telegram_id')
-
-        try:
-            staff = models.Staff.objects.get(telegram_token=token_value)
-        except models.Staff.DoesNotExist:
-            return Response({'detail': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
-
-        if telegram_id:
-            staff.telegram_id = str(telegram_id)
-            staff.save(update_fields=['telegram_id'])
-        auth_token, _ = Token.objects.get_or_create(user=staff.user)
-        payload = serializers.StaffSerializer(staff).data
-        payload['token'] = auth_token.key
-        return Response(payload)
-
-
-class TelegramTokenExchangeView(APIView):
-    permission_classes = [permissions.AllowAny]
-
-    def post(self, request, *args, **kwargs):
-        secret = request.headers.get('X-BOT-SECRET') or request.data.get('secret')
-        if not secret or secret != getattr(settings, 'BOT_SHARED_SECRET', ''):
-            return Response({'detail': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
-
-        serializer = serializers.TelegramTokenExchangeSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        token_value = serializer.validated_data['telegram_token']
-        try:
-            staff = models.Staff.objects.get(telegram_token=token_value)
-        except models.Staff.DoesNotExist:
-            return Response({'detail': 'Invalid token'}, status=status.HTTP_404_NOT_FOUND)
-
-        auth_token, _ = Token.objects.get_or_create(user=staff.user)
-        data = {
-            'token': auth_token.key,
-            'staff': serializers.StaffSerializer(staff).data,
-            'active_branch': serializers.BranchSerializer(staff.active_shift.branch).data
-            if staff.active_shift
-            else None,
-        }
-        return Response(data)

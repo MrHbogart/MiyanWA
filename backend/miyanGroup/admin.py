@@ -12,9 +12,9 @@ class BranchAdmin(admin.ModelAdmin):
 
 @admin.register(models.Staff)
 class StaffAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'telegram_token', 'telegram_id', 'language_preference', 'created_at')
-    search_fields = ('user__username', 'telegram_id', 'telegram_token')
-    readonly_fields = ('telegram_token', 'created_at', 'updated_at')
+    list_display = ('id', 'user', 'created_at')
+    search_fields = ('user__username',)
+    readonly_fields = ('created_at', 'updated_at')
 
 
 @admin.register(models.StaffBranchAssignment)

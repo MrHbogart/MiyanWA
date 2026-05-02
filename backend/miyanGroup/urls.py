@@ -15,6 +15,4 @@ router.register(r'inventory/inputs', views.InventoryInputViewSet, basename='inve
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('telegram/link/', views.TelegramLinkView.as_view(), name='telegram-link'),
-    path('telegram/token/', views.TelegramTokenExchangeView.as_view(), name='telegram-token'),
 ]

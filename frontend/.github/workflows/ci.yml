@@ -13,6 +13,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      NPM_REGISTRY: https://mirror-npm.runflare.com/
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -24,7 +26,9 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          npm config set registry "${NPM_REGISTRY}"
+          npm ci
 
       - name: Lint (optional placeholder)
         run: npm run lint --if-present

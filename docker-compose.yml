@@ -1,62 +1,104 @@
 services:
-  db:
-    image: postgres:15-alpine
-    restart: unless-stopped
-    env_file:
-      - ./backend/.env
-    environment:
-      PGDATA: /var/lib/postgresql/data/pgdata
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - miyan_network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER:-postgres}\" -d \"$${POSTGRES_DB:-postgres}\""]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-
   backend:
+    platform: ${DOCKER_PLATFORM}
     build:
       context: .
       dockerfile: backend/Dockerfile
+      args:
+        PYTHON_BASE_IMAGE: ${PYTHON_BASE_IMAGE:-python:3.12-slim}
+
+        # Mirrors: use .env if set, otherwise safe defaults
+        DEBIAN_MIRROR: ${DEBIAN_MIRROR:-http://deb.debian.org/debian}
+        DEBIAN_SECURITY_MIRROR: ${DEBIAN_SECURITY_MIRROR:-http://security.debian.org/debian-security}
+        APT_DISABLE_VALID_UNTIL: ${APT_DISABLE_VALID_UNTIL:-false}
+
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
+        PIP_EXTRA_INDEX_URL: ${PIP_EXTRA_INDEX_URL:-}
+        PIP_TRUSTED_HOSTS: ${PIP_TRUSTED_HOSTS:-}
+
     restart: unless-stopped
-    env_file:
-      - ./backend/.env
     environment:
       DJANGO_IN_DOCKER: "1"
-    depends_on:
-      db:
-        condition: service_healthy
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-local-dev-secret-not-for-production}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-True}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,backend}
+      DJANGO_LOG_LEVEL: ${DJANGO_LOG_LEVEL:-INFO}
+
+      DJANGO_DB_NAME: ${DJANGO_DB_NAME:-/app/data/db.sqlite3}
+
+      DB_WAIT_TIMEOUT: ${DB_WAIT_TIMEOUT:-120}
+      DB_WAIT_INTERVAL: ${DB_WAIT_INTERVAL:-3}
+
+      DJANGO_CORS_ALLOWED_ORIGINS: ${DJANGO_CORS_ALLOWED_ORIGINS:-http://localhost:3030,http://127.0.0.1:3030}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost:3030,http://127.0.0.1:3030}
+      DJANGO_SESSION_COOKIE_NAME: ${DJANGO_SESSION_COOKIE_NAME:-miyan_sessionid}
+      DJANGO_CSRF_COOKIE_NAME: ${DJANGO_CSRF_COOKIE_NAME:-miyan_csrftoken}
+
+      DJANGO_SECURE_SSL_REDIRECT: ${DJANGO_SECURE_SSL_REDIRECT:-False}
+      DJANGO_TRUST_PROXY_HEADERS: ${DJANGO_TRUST_PROXY_HEADERS:-False}
+      DJANGO_USE_X_FORWARDED_HOST: ${DJANGO_USE_X_FORWARDED_HOST:-False}
+
+      DJANGO_SESSION_COOKIE_SECURE: ${DJANGO_SESSION_COOKIE_SECURE:-False}
+      DJANGO_CSRF_COOKIE_SECURE: ${DJANGO_CSRF_COOKIE_SECURE:-False}
+
+      DRF_USER_THROTTLE_RATE: ${DRF_USER_THROTTLE_RATE:-1000/hour}
+      DRF_ANON_THROTTLE_RATE: ${DRF_ANON_THROTTLE_RATE:-100/hour}
+
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-development}
+
+      APP_VERSION: ${APP_VERSION:-0.1.0}
+      APP_COMMIT_SHA: ${APP_COMMIT_SHA:-local}
+
     ports:
-      - "8000:8000"
+      - "127.0.0.1:${BACKEND_HOST_PORT:-8000}:8000"
+
     volumes:
       - backend_static:/app/staticfiles
       - backend_media:/app/media
+      - backend_db:/app/data
+
     networks:
       - miyan_network
+
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS -H 'X-Forwarded-Proto: https' http://127.0.0.1:8000/api/core/health/ || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/api/core/health/ || exit 1"]
       interval: 20s
       timeout: 5s
       retries: 5
       start_period: 20s
 
   frontend:
+    platform: ${DOCKER_PLATFORM}
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        NODE_BASE_IMAGE: ${NODE_BASE_IMAGE:-node:20-alpine}
+
+        # Optional mirrors with safe defaults
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org/}
+        ALPINE_MAIN_MIRROR: ${ALPINE_MAIN_MIRROR:-https://dl-cdn.alpinelinux.org/alpine}
+        ALPINE_COMMUNITY_MIRROR: ${ALPINE_COMMUNITY_MIRROR:-https://dl-cdn.alpinelinux.org/alpine}
+
     restart: unless-stopped
-    env_file:
-      - ./frontend/.env
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      NUXT_PUBLIC_API_BASE_URL: ${NUXT_PUBLIC_API_BASE_URL:-http://localhost:8000/api}
+      NUXT_PUBLIC_SITE_DOMAIN: ${NUXT_PUBLIC_SITE_DOMAIN:-http://localhost:3000}
+      NITRO_HOST: 0.0.0.0
+      NITRO_PORT: 3000
+
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
+
     ports:
-      - "3000:3000"
+      - "127.0.0.1:${FRONTEND_HOST_PORT:-3000}:3000"
+
     networks:
       - miyan_network
+
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3000/ || exit 1"]
       interval: 30s
@@ -64,30 +106,11 @@ services:
       retries: 5
       start_period: 20s
 
-  telegrambot:
-    build:
-      context: ./telegram-bot
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    env_file:
-      - ./telegram-bot/.env
-    environment:
-      BOT_STATE_PATH: /data/state.json
-      API_URL: ${API_URL:-http://backend:8000}
-    depends_on:
-      backend:
-        condition: service_healthy
-    volumes:
-      - telegram_data:/data
-    networks:
-      - miyan_network
-
 networks:
   miyan_network:
     driver: bridge
 
 volumes:
-  postgres_data:
   backend_static:
   backend_media:
-  telegram_data:
+  backend_db:

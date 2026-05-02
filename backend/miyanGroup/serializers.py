@@ -2,7 +2,6 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
-from rest_framework.authtoken.models import Token
 
 from . import models
 
@@ -25,13 +24,10 @@ class StaffSerializer(serializers.ModelSerializer):
             'id',
             'username',
             'email',
-            'telegram_token',
-            'telegram_id',
-            'language_preference',
             'created_at',
             'updated_at',
         ]
-        read_only_fields = ['telegram_token', 'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at']
 
 
 class StaffRegistrationSerializer(serializers.Serializer):
@@ -40,7 +36,6 @@ class StaffRegistrationSerializer(serializers.Serializer):
     email = serializers.EmailField(allow_blank=True, required=False)
     first_name = serializers.CharField(allow_blank=True, required=False)
     last_name = serializers.CharField(allow_blank=True, required=False)
-    language_preference = serializers.ChoiceField(choices=[('fa', 'Persian'), ('en', 'Finglish')], default='fa')
     branch_id = serializers.IntegerField(required=False)
 
     def validate_username(self, value):
@@ -58,11 +53,10 @@ class StaffRegistrationSerializer(serializers.Serializer):
     def create(self, validated_data):
         branch_id = validated_data.pop('branch_id', None)
         password = validated_data.pop('password')
-        language = validated_data.pop('language_preference', 'fa')
         user_fields = {k: validated_data.get(k, '') for k in ['username', 'email', 'first_name', 'last_name']}
         with transaction.atomic():
             user = User.objects.create_user(password=password, **user_fields)
-            staff = models.Staff.objects.create(user=user, language_preference=language)
+            staff = models.Staff.objects.create(user=user)
             if branch_id:
                 branch = models.Branch.objects.get(id=branch_id)
                 models.StaffBranchAssignment.objects.create(
@@ -169,20 +163,6 @@ class InventoryTransactionSerializer(serializers.ModelSerializer):
         model = models.InventoryTransaction
         fields = ['id', 'branch', 'item', 'note', 'created_by', 'created_at', 'updated_at']
         read_only_fields = ['branch', 'created_by', 'created_at', 'updated_at']
-
-
-class TelegramLinkSerializer(serializers.Serializer):
-    telegram_token = serializers.CharField()
-    telegram_id = serializers.CharField(required=False, allow_blank=True)
-
-
-class TelegramTokenExchangeSerializer(serializers.Serializer):
-    telegram_token = serializers.CharField()
-
-    def create(self, validated_data):
-        staff = validated_data['staff']
-        token, _ = Token.objects.get_or_create(user=staff.user)
-        return token
 
 
 class MiyanGallerySerializer(serializers.ModelSerializer):

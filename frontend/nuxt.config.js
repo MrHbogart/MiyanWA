@@ -15,8 +15,8 @@ export default defineNuxtConfig({
   ],
   runtimeConfig: {
     public: {
-      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || 'https://miyangroup.com/api',
-      siteDomain: process.env.NUXT_PUBLIC_SITE_DOMAIN || 'https://miyangroup.com',
+      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api',
+      siteDomain: process.env.NUXT_PUBLIC_SITE_DOMAIN || 'http://localhost:3000',
     },
   },
   components: [{ path: '~/components', pathPrefix: false }],

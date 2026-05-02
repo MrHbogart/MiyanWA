@@ -9,9 +9,8 @@ from core.models import TimeStampedModel
 
 
 def generate_telegram_token() -> str:
-    """Generate a durable token that staff share with the Telegram bot."""
+    """Legacy migration helper kept for historical migration compatibility."""
     return secrets.token_urlsafe(24)
-
 
 class Branch(TimeStampedModel):
     name = models.CharField(max_length=200, unique=True)
@@ -30,14 +29,6 @@ class Branch(TimeStampedModel):
 
 class Staff(TimeStampedModel):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='staff_profile')
-    telegram_token = models.CharField(max_length=128, unique=True, default=generate_telegram_token)
-    telegram_id = models.CharField(max_length=64, blank=True, null=True)
-    language_preference = models.CharField(
-        max_length=8,
-        choices=[('fa', 'Persian'), ('en', 'Finglish')],
-        default='fa',
-        help_text="Preferred language for bot replies. 'en' maps to Finglish.",
-    )
 
     class Meta:
         verbose_name = "Staff"

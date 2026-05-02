@@ -10,7 +10,6 @@ __pycache__/
 build/
 dist/
 node_modules/
-postgres_data/
 staticfiles/
 media/
 venv/

@@ -1,30 +1,81 @@
-FROM python:3.11-slim AS builder
+ARG PYTHON_BASE_IMAGE=python:3.12-slim
+ARG DEBIAN_MIRROR=
+ARG DEBIAN_SECURITY_MIRROR=
+ARG APT_DISABLE_VALID_UNTIL=false
+ARG PIP_INDEX_URL=https://pypi.org/simple
+ARG PIP_EXTRA_INDEX_URL=
+ARG PIP_TRUSTED_HOSTS=
+
+FROM ${PYTHON_BASE_IMAGE} AS builder
+
+ARG PIP_INDEX_URL
+ARG PIP_EXTRA_INDEX_URL
+ARG PIP_TRUSTED_HOSTS
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    VENV_PATH="/opt/venv"
+    VENV_PATH="/opt/venv" \
+    PIP_INDEX_URL="${PIP_INDEX_URL}" \
+    PIP_EXTRA_INDEX_URL="${PIP_EXTRA_INDEX_URL}" \
+    PIP_TRUSTED_HOSTS="${PIP_TRUSTED_HOSTS}"
 
 WORKDIR /app
 
 RUN python -m venv ${VENV_PATH}
 ENV PATH="${VENV_PATH}/bin:${PATH}"
 
-COPY requirements.txt .
-RUN pip install --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
+COPY backend/requirements.txt ./requirements.txt
+RUN set -eu; \
+    PIP_INDEX_URL="${PIP_INDEX_URL:-https://pypi.org/simple}"; \
+    set -- --index-url "${PIP_INDEX_URL}"; \
+    if [ -n "${PIP_EXTRA_INDEX_URL}" ]; then \
+      set -- "$@" --extra-index-url "${PIP_EXTRA_INDEX_URL}"; \
+    fi; \
+    if [ -n "${PIP_TRUSTED_HOSTS}" ]; then \
+      for host in ${PIP_TRUSTED_HOSTS}; do \
+        set -- "$@" --trusted-host "${host}"; \
+      done; \
+    fi; \
+    pip install --upgrade pip "$@"; \
+    pip install --no-cache-dir -r requirements.txt "$@"
 
-FROM python:3.11-slim AS final
+FROM ${PYTHON_BASE_IMAGE} AS final
+
+ARG DEBIAN_MIRROR
+ARG DEBIAN_SECURITY_MIRROR
+ARG APT_DISABLE_VALID_UNTIL
+ARG PIP_INDEX_URL
+ARG PIP_EXTRA_INDEX_URL
+ARG PIP_TRUSTED_HOSTS
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     DJANGO_SETTINGS_MODULE=config.settings \
     VENV_PATH="/opt/venv" \
     APP_USER="django" \
-    APP_HOME="/home/django"
+    APP_HOME="/home/django" \
+    PIP_INDEX_URL="${PIP_INDEX_URL}" \
+    PIP_EXTRA_INDEX_URL="${PIP_EXTRA_INDEX_URL}" \
+    PIP_TRUSTED_HOSTS="${PIP_TRUSTED_HOSTS}"
 
 WORKDIR /app
 
-RUN apt-get update && \
+RUN set -eux; \
+    if [ -n "${DEBIAN_MIRROR}" ] || [ -n "${DEBIAN_SECURITY_MIRROR}" ]; then \
+      for source_file in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do \
+        [ -f "$source_file" ] || continue; \
+        if [ -n "${DEBIAN_SECURITY_MIRROR}" ]; then \
+          sed -i "s|http://security.debian.org/debian-security|${DEBIAN_SECURITY_MIRROR}|g; s|https://security.debian.org/debian-security|${DEBIAN_SECURITY_MIRROR}|g" "$source_file"; \
+        fi; \
+        if [ -n "${DEBIAN_MIRROR}" ]; then \
+          sed -i "s|http://deb.debian.org/debian|${DEBIAN_MIRROR}|g; s|https://deb.debian.org/debian|${DEBIAN_MIRROR}|g" "$source_file"; \
+        fi; \
+      done; \
+    fi; \
+    if [ "${APT_DISABLE_VALID_UNTIL}" = "true" ]; then \
+      printf 'Acquire::Check-Valid-Until "false";\nAcquire::Check-Date "false";\n' > /etc/apt/apt.conf.d/99no-check-valid-until; \
+    fi; \
+    apt-get update && \
     apt-get install -y --no-install-recommends gosu curl ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 

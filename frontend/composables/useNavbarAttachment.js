@@ -71,15 +71,6 @@ export function useNavbarAttachment(navbarRef, navbarSentinel) {
     checkAttachment()
   }
 
-  function onNavWheel(e) {
-    // Forward wheel scroll to the page so the navbar never traps scroll
-    if (typeof window === 'undefined') return
-    if (Math.abs(e.deltaY) > 0 || Math.abs(e.deltaX) > 0) {
-      e.preventDefault()
-      window.scrollBy({ top: e.deltaY, left: e.deltaX, behavior: 'auto' })
-    }
-  }
-
   function onLoad() {
     updateNavHeight()
     checkAttachment()
@@ -174,11 +165,6 @@ export function useNavbarAttachment(navbarRef, navbarSentinel) {
     updateNavHeight()
     checkAttachment()
 
-    const navEl = navbarRef.value
-    if (navEl) {
-      navEl.addEventListener('wheel', onNavWheel, { passive: false })
-    }
-
     window.addEventListener('scroll', onScrollTrack, { passive: true })
     window.addEventListener('resize', onResize)
     window.addEventListener('load', onLoad)
@@ -189,10 +175,6 @@ export function useNavbarAttachment(navbarRef, navbarSentinel) {
     window.removeEventListener('scroll', onScrollTrack)
     window.removeEventListener('resize', onResize)
     window.removeEventListener('load', onLoad)
-    const navEl = navbarRef.value
-    if (navEl) {
-      navEl.removeEventListener('wheel', onNavWheel)
-    }
     if (rafId) window.cancelAnimationFrame(rafId)
     syncAttachment(false)
   })

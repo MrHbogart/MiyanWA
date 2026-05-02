@@ -2,7 +2,6 @@ import logging
 import os
 from pathlib import Path
 
-import dj_database_url
 import sentry_sdk
 from django.core.management.utils import get_random_secret_key
 from dotenv import load_dotenv
@@ -62,6 +61,8 @@ ALLOWED_HOSTS = list(dict.fromkeys(list(ALLOWED_HOSTS) + list(_local_hosts)))
 
 
 LOG_LEVEL = os.getenv('DJANGO_LOG_LEVEL', 'DEBUG')
+# Detect running in Docker: either explicit env var or presence of /.dockerenv
+IN_DOCKER = env_bool('DJANGO_IN_DOCKER', False) or Path('/.dockerenv').exists()
 
 # Application definition ----------------------------------------------------
 INSTALLED_APPS = [
@@ -115,61 +116,35 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database ------------------------------------------------------------------
-DB_CONN_MAX_AGE = int(os.getenv('DB_CONN_MAX_AGE', '0'))
-DATABASE_URL = os.getenv('DATABASE_URL')
-POSTGRES_DB = os.getenv('POSTGRES_DB')
-POSTGRES_USER = os.getenv('POSTGRES_USER')
-POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD')
-# Detect running in Docker: either explicit env var or presence of /.dockerenv
-IN_DOCKER = env_bool('DJANGO_IN_DOCKER', False) or Path('/.dockerenv').exists()
+def get_sqlite_db_path(env_key, fallback_filename):
+    """Resolve an sqlite DB path from env, expanding relative paths from BASE_DIR."""
+    db_path = os.getenv(env_key, fallback_filename).strip()
+    path = Path(db_path)
+    if not path.is_absolute():
+        path = BASE_DIR / path
+    return path
 
-# Allow overriding POSTGRES_HOST via env var; otherwise default to 'db'
-# when running in Docker (compose) else 'localhost' for local dev.
-POSTGRES_HOST = os.getenv('POSTGRES_HOST')
-POSTGRES_PORT = os.getenv('POSTGRES_PORT', '5432')
-if not POSTGRES_HOST:
-    POSTGRES_HOST = 'db' if IN_DOCKER else 'localhost'
 
-if RUNNING_TESTS:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'test_db.sqlite3',
-        }
-    }
-elif DATABASE_URL:
-    DATABASES = {
-        'default': dj_database_url.parse(
-            DATABASE_URL,
-            conn_max_age=DB_CONN_MAX_AGE,
-            ssl_require=env_bool('DB_SSL_REQUIRE', False),
-        )
-    }
-elif POSTGRES_DB or POSTGRES_USER or POSTGRES_PASSWORD:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': POSTGRES_DB or 'miyan_db',
-            'USER': POSTGRES_USER or 'miyan_user',
-            'PASSWORD': POSTGRES_PASSWORD or 'miyan_password',
-            'HOST': POSTGRES_HOST,
-            'PORT': POSTGRES_PORT,
-            'CONN_MAX_AGE': DB_CONN_MAX_AGE,
-        }
-    }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
+def get_database_name():
+    if RUNNING_TESTS:
+        return get_sqlite_db_path('DJANGO_TEST_DB_NAME', 'test_db.sqlite3')
+    return get_sqlite_db_path('DJANGO_DB_NAME', 'db.sqlite3')
 
-# When running inside Docker allow the common service hostnames so internal
-# requests from other containers (for example the telegram-bot calling
-# http://backend:8000) are accepted by Django's host header check.
+
+DATABASE_NAME = get_database_name()
+DATABASE_NAME.parent.mkdir(parents=True, exist_ok=True)
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': DATABASE_NAME,
+    }
+}
+
+# When running inside Docker allow common service hostnames for internal
+# container-to-container requests.
 if IN_DOCKER:
-    _docker_hosts = ['backend', 'frontend', 'telegrambot', 'telegram-bot', 'db']
+    _docker_hosts = ['backend', 'frontend']
     ALLOWED_HOSTS = list(dict.fromkeys(ALLOWED_HOSTS + _docker_hosts))
 
 # Password validation -------------------------------------------------------
@@ -296,6 +271,9 @@ SECURE_PROXY_SSL_HEADER = (
 if not SECURE_SSL_REDIRECT:
     SECURE_HSTS_SECONDS = 0
 
+# Shared secret used by external callers (if any) for token-style integration.
+BOT_SHARED_SECRET = os.getenv('TELEGRAM_SHARED_SECRET', '')
+
 # Additional security settings ----------------------------------------------
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
@@ -368,6 +346,3 @@ LOGGING = {
         },
     },
 }
-
-# Shared secret used by the telegram bot to request tokens securely
-BOT_SHARED_SECRET = os.getenv('TELEGRAM_SHARED_SECRET', '')

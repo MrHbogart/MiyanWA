@@ -9,35 +9,24 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd="pg_isready -U postgres"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
     env:
       DJANGO_SECRET_KEY: github-ci-secret
       DJANGO_DEBUG: "False"
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
       PYTHONUNBUFFERED: "1"
+      PIP_INDEX_URL: https://mirror-pypi.runflare.com/
+      PIP_TRUSTED_HOSTS: runflare.com
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
+          python -m pip install --upgrade pip --index-url "${PIP_INDEX_URL}" --trusted-host "${PIP_TRUSTED_HOSTS}"
           # Use the canonical repository-level requirements file only.
-          pip install -r requirements.txt
+          pip install -r requirements.txt --index-url "${PIP_INDEX_URL}" --trusted-host "${PIP_TRUSTED_HOSTS}"
 
       - name: Run database migrations
         run: python manage.py migrate --noinput

@@ -1,4 +1,13 @@
-FROM node:20-alpine AS builder
+ARG NODE_BASE_IMAGE=node:20-alpine
+ARG NPM_REGISTRY=
+ARG ALPINE_MAIN_MIRROR=
+ARG ALPINE_COMMUNITY_MIRROR=
+
+FROM ${NODE_BASE_IMAGE} AS builder
+
+ARG NPM_REGISTRY
+ARG ALPINE_MAIN_MIRROR
+ARG ALPINE_COMMUNITY_MIRROR
 
 WORKDIR /app
 
@@ -6,17 +15,47 @@ ENV NODE_ENV=production
 ENV NITRO_PORT=3000
 ENV NITRO_HOST=0.0.0.0
 ENV NUXT_TELEMETRY_DISABLED=1
+ENV NPM_REGISTRY="${NPM_REGISTRY}"
 
-COPY package.json package-lock.json ./
+COPY package*.json ./
 
-RUN NODE_ENV=development npm ci
+RUN if [ -n "${ALPINE_MAIN_MIRROR}" ] || [ -n "${ALPINE_COMMUNITY_MIRROR}" ]; then \
+      if [ -z "${ALPINE_MAIN_MIRROR}" ]; then \
+        ALPINE_MAIN_MIRROR="${ALPINE_COMMUNITY_MIRROR}"; \
+      fi; \
+      if [ -z "${ALPINE_COMMUNITY_MIRROR}" ]; then \
+        ALPINE_COMMUNITY_MIRROR="${ALPINE_MAIN_MIRROR}"; \
+      fi; \
+      awk -v main="${ALPINE_MAIN_MIRROR}" -v community="${ALPINE_COMMUNITY_MIRROR}" '{ if ($0 ~ /\/main$/) { sub(/https?:\/\/[^ ]+\/alpine/, main); } else if ($0 ~ /\/community$/) { sub(/https?:\/\/[^ ]+\/alpine/, community); } print; }' /etc/apk/repositories > /tmp/apk.repositories && \
+      mv /tmp/apk.repositories /etc/apk/repositories; \
+    fi
+
+RUN set -eu; \
+    PRIMARY_NPM_REGISTRY="${NPM_REGISTRY:-https://registry.npmjs.org/}"; \
+    npm config set registry "${PRIMARY_NPM_REGISTRY}"; \
+    install_cmd="npm ci"; \
+    if [ ! -f package-lock.json ]; then \
+      install_cmd="npm install"; \
+    fi; \
+    if ! NODE_ENV=development sh -c "${install_cmd}"; then \
+      if [ "${PRIMARY_NPM_REGISTRY}" != "https://registry.npmjs.org/" ]; then \
+        npm config set registry "https://registry.npmjs.org/"; \
+        NODE_ENV=development sh -c "${install_cmd}"; \
+      else \
+        exit 1; \
+      fi; \
+    fi
 
 COPY . .
 
 RUN npm run prep-images
 RUN npm run build
 
-FROM node:20-alpine AS runner
+FROM ${NODE_BASE_IMAGE} AS runner
+
+ARG NPM_REGISTRY
+ARG ALPINE_MAIN_MIRROR
+ARG ALPINE_COMMUNITY_MIRROR
 
 WORKDIR /app
 
@@ -26,10 +65,36 @@ ENV PORT=3000
 ENV NITRO_HOST=0.0.0.0
 ENV NITRO_PORT=3000
 ENV NUXT_TELEMETRY_DISABLED=1
+ENV NPM_REGISTRY="${NPM_REGISTRY}"
 
-COPY package.json package-lock.json ./
+COPY package*.json ./
 
-RUN npm ci --omit=dev
+RUN if [ -n "${ALPINE_MAIN_MIRROR}" ] || [ -n "${ALPINE_COMMUNITY_MIRROR}" ]; then \
+      if [ -z "${ALPINE_MAIN_MIRROR}" ]; then \
+        ALPINE_MAIN_MIRROR="${ALPINE_COMMUNITY_MIRROR}"; \
+      fi; \
+      if [ -z "${ALPINE_COMMUNITY_MIRROR}" ]; then \
+        ALPINE_COMMUNITY_MIRROR="${ALPINE_MAIN_MIRROR}"; \
+      fi; \
+      awk -v main="${ALPINE_MAIN_MIRROR}" -v community="${ALPINE_COMMUNITY_MIRROR}" '{ if ($0 ~ /\/main$/) { sub(/https?:\/\/[^ ]+\/alpine/, main); } else if ($0 ~ /\/community$/) { sub(/https?:\/\/[^ ]+\/alpine/, community); } print; }' /etc/apk/repositories > /tmp/apk.repositories && \
+      mv /tmp/apk.repositories /etc/apk/repositories; \
+    fi
+
+RUN set -eu; \
+    PRIMARY_NPM_REGISTRY="${NPM_REGISTRY:-https://registry.npmjs.org/}"; \
+    npm config set registry "${PRIMARY_NPM_REGISTRY}"; \
+    install_cmd="npm ci --omit=dev"; \
+    if [ ! -f package-lock.json ]; then \
+      install_cmd="npm install --omit=dev"; \
+    fi; \
+    if ! sh -c "${install_cmd}"; then \
+      if [ "${PRIMARY_NPM_REGISTRY}" != "https://registry.npmjs.org/" ]; then \
+        npm config set registry "https://registry.npmjs.org/"; \
+        sh -c "${install_cmd}"; \
+      else \
+        exit 1; \
+      fi; \
+    fi
 
 COPY --from=builder /app/.output ./.output
 COPY --from=builder /app/public ./public

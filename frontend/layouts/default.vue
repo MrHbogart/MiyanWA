@@ -94,17 +94,38 @@ watch(currentDir, (dir) => {
 }, { immediate: true })
 
 let removeRouteHook = null
+let removeWheelUnlock = null
+let removeTouchUnlock = null
+
+function ensureScrollUnlocked() {
+  if (typeof document === 'undefined') return
+  if (document.querySelector('.modal-overlay')) return
+  if (document.documentElement.style.overflow === 'hidden') {
+    document.documentElement.style.overflow = ''
+  }
+  if (document.body) {
+    if (document.body.style.overflow === 'hidden') {
+      document.body.style.overflow = ''
+    }
+  }
+}
 
 onMounted(() => {
   if (typeof window !== 'undefined') {
     window.addEventListener('scroll', handleScroll, { passive: true })
+    window.addEventListener('wheel', ensureScrollUnlocked, { passive: true })
+    window.addEventListener('touchstart', ensureScrollUnlocked, { passive: true })
     handleScroll()
+    ensureScrollUnlocked()
+    removeWheelUnlock = () => window.removeEventListener('wheel', ensureScrollUnlocked)
+    removeTouchUnlock = () => window.removeEventListener('touchstart', ensureScrollUnlocked)
   }
 
   removeRouteHook = router.afterEach((to, from) => {
     if (typeof window === 'undefined') return
     window.requestAnimationFrame(() => {
       handleScroll()
+      ensureScrollUnlocked()
       const parentTo = (to?.meta?.pageTheme?.group) || currentThemeGroup.value
       const parentFrom = (from?.meta?.pageTheme?.group) || parentTo
       if (!parentFrom || parentFrom !== parentTo) {
@@ -117,6 +138,14 @@ onMounted(() => {
 onUnmounted(() => {
   if (typeof window !== 'undefined') {
     window.removeEventListener('scroll', handleScroll)
+    if (typeof removeWheelUnlock === 'function') {
+      removeWheelUnlock()
+      removeWheelUnlock = null
+    }
+    if (typeof removeTouchUnlock === 'function') {
+      removeTouchUnlock()
+      removeTouchUnlock = null
+    }
   }
   if (typeof removeRouteHook === 'function') {
     removeRouteHook()
