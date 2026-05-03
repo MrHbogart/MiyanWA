@@ -1,21 +1,24 @@
 ARG NODE_BASE_IMAGE=node:20-alpine
 ARG NPM_REGISTRY=
+ARG NPM_REGISTRY_FALLBACK=https://archive.ito.gov.ir/npm/
 ARG ALPINE_MAIN_MIRROR=
 ARG ALPINE_COMMUNITY_MIRROR=
 
 FROM ${NODE_BASE_IMAGE} AS builder
 
 ARG NPM_REGISTRY
+ARG NPM_REGISTRY_FALLBACK
 ARG ALPINE_MAIN_MIRROR
 ARG ALPINE_COMMUNITY_MIRROR
 
 WORKDIR /app
 
-ENV NODE_ENV=production
+ENV NODE_ENV=development
 ENV NITRO_PORT=3000
 ENV NITRO_HOST=0.0.0.0
 ENV NUXT_TELEMETRY_DISABLED=1
 ENV NPM_REGISTRY="${NPM_REGISTRY}"
+ENV NPM_REGISTRY_FALLBACK="${NPM_REGISTRY_FALLBACK}"
 
 COPY package*.json ./
 
@@ -32,15 +35,19 @@ RUN if [ -n "${ALPINE_MAIN_MIRROR}" ] || [ -n "${ALPINE_COMMUNITY_MIRROR}" ]; th
 
 RUN set -eu; \
     PRIMARY_NPM_REGISTRY="${NPM_REGISTRY:-https://registry.npmjs.org/}"; \
+    SECONDARY_NPM_REGISTRY="${NPM_REGISTRY_FALLBACK:-https://archive.ito.gov.ir/npm/}"; \
     npm config set registry "${PRIMARY_NPM_REGISTRY}"; \
-    install_cmd="npm ci"; \
+    install_cmd="npm ci --include=dev"; \
     if [ ! -f package-lock.json ]; then \
       install_cmd="npm install"; \
     fi; \
-    if ! NODE_ENV=development sh -c "${install_cmd}"; then \
-      if [ "${PRIMARY_NPM_REGISTRY}" != "https://registry.npmjs.org/" ]; then \
+    if ! sh -c "${install_cmd}"; then \
+      if [ "${SECONDARY_NPM_REGISTRY}" != "${PRIMARY_NPM_REGISTRY}" ]; then \
+        npm config set registry "${SECONDARY_NPM_REGISTRY}"; \
+        sh -c "${install_cmd}"; \
+      elif [ "${PRIMARY_NPM_REGISTRY}" != "https://registry.npmjs.org/" ]; then \
         npm config set registry "https://registry.npmjs.org/"; \
-        NODE_ENV=development sh -c "${install_cmd}"; \
+        sh -c "${install_cmd}"; \
       else \
         exit 1; \
       fi; \
@@ -54,6 +61,7 @@ RUN npm run build
 FROM ${NODE_BASE_IMAGE} AS runner
 
 ARG NPM_REGISTRY
+ARG NPM_REGISTRY_FALLBACK
 ARG ALPINE_MAIN_MIRROR
 ARG ALPINE_COMMUNITY_MIRROR
 
@@ -66,6 +74,7 @@ ENV NITRO_HOST=0.0.0.0
 ENV NITRO_PORT=3000
 ENV NUXT_TELEMETRY_DISABLED=1
 ENV NPM_REGISTRY="${NPM_REGISTRY}"
+ENV NPM_REGISTRY_FALLBACK="${NPM_REGISTRY_FALLBACK}"
 
 COPY package*.json ./
 
@@ -82,13 +91,17 @@ RUN if [ -n "${ALPINE_MAIN_MIRROR}" ] || [ -n "${ALPINE_COMMUNITY_MIRROR}" ]; th
 
 RUN set -eu; \
     PRIMARY_NPM_REGISTRY="${NPM_REGISTRY:-https://registry.npmjs.org/}"; \
+    SECONDARY_NPM_REGISTRY="${NPM_REGISTRY_FALLBACK:-https://archive.ito.gov.ir/npm/}"; \
     npm config set registry "${PRIMARY_NPM_REGISTRY}"; \
     install_cmd="npm ci --omit=dev"; \
     if [ ! -f package-lock.json ]; then \
       install_cmd="npm install --omit=dev"; \
     fi; \
     if ! sh -c "${install_cmd}"; then \
-      if [ "${PRIMARY_NPM_REGISTRY}" != "https://registry.npmjs.org/" ]; then \
+      if [ "${SECONDARY_NPM_REGISTRY}" != "${PRIMARY_NPM_REGISTRY}" ]; then \
+        npm config set registry "${SECONDARY_NPM_REGISTRY}"; \
+        sh -c "${install_cmd}"; \
+      elif [ "${PRIMARY_NPM_REGISTRY}" != "https://registry.npmjs.org/" ]; then \
         npm config set registry "https://registry.npmjs.org/"; \
         sh -c "${install_cmd}"; \
       else \
@@ -110,4 +123,4 @@ RUN chown -R node:node /app || true
 
 USER node
 
-CMD ["npm", "run", "start"]
+CMD ["node", ".output/server/index.mjs"]

@@ -77,7 +77,8 @@ services:
         NODE_BASE_IMAGE: ${NODE_BASE_IMAGE:-node:20-alpine}
 
         # Optional mirrors with safe defaults
-        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org/}
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://archive.ito.gov.ir/npm/}
+        NPM_REGISTRY_FALLBACK: ${NPM_REGISTRY_FALLBACK:-https://registry.npmjs.org/}
         ALPINE_MAIN_MIRROR: ${ALPINE_MAIN_MIRROR:-https://dl-cdn.alpinelinux.org/alpine}
         ALPINE_COMMUNITY_MIRROR: ${ALPINE_COMMUNITY_MIRROR:-https://dl-cdn.alpinelinux.org/alpine}
 
